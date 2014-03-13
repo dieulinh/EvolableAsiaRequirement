@@ -1,0 +1,175 @@
+import hmac
+import hashlib
+import array
+import time
+import unittest
+import urllib, urllib2, cookielib, httplib
+ 
+ 
+def HOTP(K, C, digits=8):
+    """
+    HOTP accepts key K and counter C
+    optional digits parameter can control the response length
+ 
+    returns the OATH integer code with {digits} length
+    """
+    C_bytes = _long_to_byte_array(C)
+    hmac_sha1 = hmac.new(key=K, msg=C_bytes,
+                         digestmod=hashlib.sha256).hexdigest()
+    return Truncate(hmac_sha1)[-digits:]
+ 
+ 
+def TOTP(K, digits=8, window=30):
+    """
+    TOTP is a time-based variant of HOTP.
+    It accepts only key K, since the counter is derived from the current time
+    optional digits parameter can control the response length
+    optional window parameter controls the time window in seconds
+ 
+    returns the OATH integer code with {digits} length
+    """
+    C = long(time.time() / window)
+    return HOTP(K, C, digits=digits)
+ 
+ 
+def Truncate(hmac_sha1):
+    """
+    Truncate represents the function that converts an HMAC-SHA-1
+    value into an HOTP value as defined in Section 5.3.
+ 
+http://tools.ietf.org/html/rfc4226#section-5.3
+ 
+    """
+    offset = int(hmac_sha1[-1], 16)
+    binary = int(hmac_sha1[(offset * 2):((offset * 2) + 8)], 16) & 0x7fffffff
+    return str(binary)
+ 
+ 
+def _long_to_byte_array(long_num):
+    """
+    helper function to convert a long number into a byte array
+    """
+    byte_array = array.array('B')
+    for i in reversed(range(0, 8)):
+        byte_array.insert(0, long_num & 0xff)
+        long_num >>= 8
+    return byte_array
+ 
+ 
+class HotpTest(unittest.TestCase):
+    """
+    a very simple test case for HOTP.
+    Based on test vectors from http://www.ietf.org/rfc/rfc4226.txt
+    """
+    def setUp(self):
+        self.key_string = 'linhvn09@gmail.comHDEEVA001ABCD'
+ 
+    def test_hotp_vectors(self):
+        hotp_result_vector = [75522411, 28708245, 35915212,
+                              96942934, 33831489, 25467646,
+                              28792277, 16258693, 89399871,
+                              52048399, 16061083]
+        for i in range(0, 10):
+            self.assertEquals(HOTP(self.key_string, i),
+                              str(hotp_result_vector[i]))
+ 
+    def test_totp(self):
+        """
+        a simple test for TOTP.
+        since TOTP depends on the time window, we cannot predict the value.
+        However, if we execute it several times, we should expect the
+        same response most of the time.
+        We only expect the value to change
+        once or not at all within a reasonable time window.
+        """
+        value = TOTP(self.key_string, digits=8, window=20)
+        value_changes = 0  # counting the number of changes to TOTP value
+        for i in range(0, 100000):
+            new_totp = TOTP(self.key_string, digits=8, window=20)
+            if new_totp != value:
+                value_changes += 1
+                value = new_totp
+        self.assertTrue(value_changes <= 1)
+ 
+if __name__ == '__main__':
+    
+    mypassword = TOTP('linhvn09@gmail.comHDEEVA001ABCD')
+    url =  "http://hdegip.appspot.com/eva/001/endpoint"
+ 
+    headers = {'Content-type':'application/json'}
+    myString = dict()
+    myString["contact_email"] ="linhvn09@gmail.com"
+    myString["github_url"]="https://github.com/dieulinh/EvolableAsiaRequirement"
+   
+ 
+
+       
+
+    import re
+    import base64
+    import json
+    # create a password manager
+   
+    password = mypassword
+
+    url = "http://hdegip.appspot.com/eva/001/endpoint"
+    request_object = urllib2.Request(url)
+    try:
+       #make request to server to figure out what type of authentication it uses
+       doc = urllib2.urlopen(request_object)
+    except IOError, error:
+       if hasattr(error, 'code'):
+          if error.code == 401:
+            print "Authenticatioon"
+             #host needs authentication, continuing
+
+    authentication_string = error.headers['www-authenticate']
+
+    #make regular expression to detect authentication realm
+    regex = re.compile(r'''(?:\s*www-authenticate\s*:)?\s*(\w*)\s+realm=['"]([^'"]+)['"]''', re.IGNORECASE)
+
+    #runs the match method to find all matches of the expression
+    match = regex.match(authentication_string)
+
+    scheme = match.group(1)
+    realm = match.group(2)
+    if scheme.lower() == 'basic':
+        print "Require"
+       #the server requires basic authentication
+    data = urllib.urlencode(myString)
+    request = urllib2.Request(url, data)
+
+    #encode the desired password in base 64 encoding
+    username = "linhvn09@gmail.com"
+    encoded_string = base64.encodestring('%s:%s' % (username, password))[:-1]
+
+    headers = {'Content-type':'application/json', 'Authorization': "Basic %s" % encoded_string}
+    print encoded_string
+   
+    print request
+ 
+   
+    params = urllib.urlencode(myString)
+    headers = {"Content-type": "application/json",
+                   "Accept": "*/*", 'Authorization': "Basic %s" % encoded_string}
+    
+    hostAdd = 'hdegip.appspot.com'
+    conn = httplib.HTTPConnection(hostAdd, 80)
+    newUrl = '/eva/001/endpoint'
+    conn.request("POST", url, params, headers)
+    conn.send(params)
+    response = conn.getresponse()
+    print response.status, response.reason,'_______', response.read()
+    
+    data = response.read()
+    
+    conn.close()
+
+  
+
+
+ 
+    
+  
+
+    
