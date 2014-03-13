@@ -1,7 +1,7 @@
 #include<stdlib.h>
 #include<cstdio>
 
-
+//Response the challenge http://hdegip.appspot.com/eva/001/requirements
 int mySquare(int a){
 	if (a<=0){
 		return 0;
